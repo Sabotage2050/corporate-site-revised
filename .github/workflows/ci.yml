@@ -11,8 +11,6 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: ap-northeast-1
-  TERRAFORM_VERSION: 1.5.0
   WORKING_DIR: infrastructure/terraform/environments/dev
 
 jobs:
@@ -32,45 +30,26 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-    # - name: Setup Terraform
-    #   uses: hashicorp/setup-terraform@v3
-    #   with:
-    #     terraform_version: ${{ env.TERRAFORM_VERSION }}
+  #   - name: Setup Terraform
+  #     uses: hashicorp/setup-terraform@v3
 
-    # - name: Terraform Format
-    #   run: terraform fmt -check
-    #   continue-on-error: true
+  #   - name: Terraform Format
+  #     run: terraform fmt -check
+  #     continue-on-error: true
 
-    # - name: Terraform Init
-    #   run: terraform init
+  #   - name: Terraform Init
+  #     run: terraform init
 
-    # - name: Terraform Plan
-    #   run: terraform plan -no-color
-    #   continue-on-error: true
-
-    # - name: Terraform Apply
-    #   run: terraform apply -auto-approve
-
-    # - name: Terraform Destroy
-    #   run: terraform destroy -auto-approve
-
-
+  #   - name: Terraform Plan
+  #     run: terraform plan -no-color
+  #     continue-on-error: true
 
     - name: Build and Test
-          # プロジェクトルートに移動
       run: |
-        # 現在のディレクトリを表示（デバッグ用）
-        pwd
-        ls -la
-        cd ../../../../  # プロジェクトルートに戻る  
-        pwd
-        # AWS認証情報の確認（機密情報は一部マスク）
-        echo "AWS Region: $AWS_REGION"
-        echo "AWS Access Key ID: ${AWS_ACCESS_KEY_ID:0:5}..."
-        echo "AWS Session Token exists: $([[ -n $AWS_SESSION_TOKEN ]] && echo 'yes' || echo 'no')"
- 
+        cd $GITHUB_WORKSPACE
+        
         # Build the CI image
         docker build \
         -t backend-ci \
@@ -81,9 +60,17 @@ jobs:
         # Run tests
         docker run --rm \
         -p 8080:8080 \
+        -e APP_NAME=${{ secrets.APP_NAME }} \
+        -e APP_PORT=${{ secrets.APP_PORT }} \
+        -e AWS_EC2_METADATA_DISABLED=true \
+        -e AWS_DISABLE_CACHE=true \
+        -e DYNAMODB_TABLE_NAME=${{ secrets.DYNAMODB_TABLE_NAME }} \
+        -e AWS_REGION=${{ secrets.AWS_REGION }} \
+        -e SES_FROM_ADDRESS=${{ secrets.SES_FROM_ADDRESS }} \
+        -e SES_TO_ADDRESS=${{ secrets.SES_TO_ADDRESS }} \
+        -e RUN_ENV=ci \
         -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
         -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
         -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-        -e AWS_REGION=$AWS_REGION \
-        --env-file ./backend/.env.ci \
+        -e DOMAIN=${{ secrets.DOMAIN }} \
         backend-ci go test ./tests/feature -v
