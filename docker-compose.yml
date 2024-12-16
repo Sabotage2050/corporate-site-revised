@@ -1,0 +1,48 @@
+# volumes:
+  # db-store:
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../infrastructure/docker/backend/Dockerfile
+      target: ${BUILD_TARGET}  # deployment or test-debug
+    ports:
+      - "8080:8080"
+      - "40000:40000"  # デバッグモードの時に必要
+    volumes:
+      - ~/.aws:/home/appuser/.aws:rw  # AWS認証情報のみをマウント
+      - ./backend:/app # アプリケーションコード
+    env_file:
+      - ./backend/.env.dev
+    tty: true
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+  # db:
+  #   build:
+  #     context: ./database
+  #     dockerfile: ./docker/Dockerfile
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password
+  #     MYSQL_DATABASE: manage_db
+  #   ports:
+  #     - "3306:3306"
+  #   # volumes:
+  #   #   - "db-store:/var/lib/mysql"
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 20
+
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   ports:
+  #     - 8081:8080
+  #   environment:
+  #     ADMINER_DEFAULT_SERVER: db
+  #   depends_on:
+  #     - db

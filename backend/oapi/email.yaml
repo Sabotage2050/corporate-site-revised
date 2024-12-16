@@ -1,0 +1,132 @@
+openapi: 3.0.0
+info:
+  title: Email API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /email/send:
+    post:
+      summary: Send a templated email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+            example:
+              subject: "フォークリフトメンテナンス通知"
+              textBody: "maintenance-notification"
+              data:
+                forkliftId: "fork-001"
+                forkliftName: "Test Electric Forklift 1"
+                status: "maintenance required"
+      responses:
+        '200':
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailResponse'
+              example:
+                messageId: "0102018b-dead-beef-cafe-12345678901"
+                status: "sent"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Validation failed"
+                messages: ["TextBody must be a valid template name"]
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Failed to send email"
+                details: "Internal server error occurred"
+
+components:
+  schemas:
+    SendEmailRequest:
+      type: object
+      required:
+        - subject
+        - textBody
+      properties:
+        subject:
+          type: string
+          description: Email subject line
+          example: "フォークリフトメンテナンス通知"
+        textBody:
+          type: string
+          description: Template name or plain text content
+          example: "maintenance-notification"
+        htmlBody:
+          type: string
+          description: HTML content of the email
+        data:
+          type: object
+          additionalProperties:
+            type: string
+          description: Template data for email content
+          example:
+            forkliftId: "fork-001"
+            forkliftName: "Test Electric Forklift 1"
+            status: "maintenance required"
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAttachment'
+    
+    EmailAttachment:
+      type: object
+      required:
+        - filename
+        - content
+        - mimeType
+      properties:
+        filename:
+          type: string
+          description: Name of the attachment file
+        content:
+          type: string
+          format: byte
+          description: Base64 encoded file content
+        mimeType:
+          type: string
+          description: MIME type of the attachment
+    
+    EmailResponse:
+      type: object
+      required:
+        - messageId
+        - status
+      properties:
+        messageId:
+          type: string
+          description: Unique identifier for the sent email
+        status:
+          type: string
+          description: Status of the email sending operation
+    
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        messages:
+          type: array
+          items:
+            type: string
+          description: Detailed validation error messages
+        details:
+          type: string
+          description: Additional error details

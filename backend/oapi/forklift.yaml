@@ -1,0 +1,106 @@
+openapi: 3.0.0
+info:
+  title: Forklift API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /forklifts/type/{enginetype}:
+    get:
+      summary: エンジンタイプでフォークリフトを取得
+      parameters:
+        - name: enginetype
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功したレスポンス
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Forklift'
+  
+  /forklifts/type/{enginetype}/{model}/{serial}:
+    get:
+      summary: エンジンタイプ、モデル、シリアル番号でフォークリフトを取得
+      parameters:
+        - name: enginetype
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: serial
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功したレスポンス
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Forklift'
+        '404':
+          description: フォークリフトが見つかりません
+
+components:
+  schemas:
+    Forklift:
+      type: object
+      required:
+        - enginetype
+        - maker
+        - model
+        - serialNo
+        - height
+        - year
+        - hourMeter
+        - application
+        - fob
+      properties:
+        enginetype:
+          type: string
+          description: フォークリフトのエンジンタイプ
+        maker:
+          type: string
+          description: フォークリフトのメーカー
+        model:
+          type: string
+          description: フォークリフトのモデル
+        serialNo:
+          type: string
+          description: フォークリフトのシリアル番号
+        height:
+          type: number
+          format: double
+          description: フォークリフトの高さ
+        ct:
+          type: string
+          description: フォークリフトのCT
+        attachment:
+          type: string
+          description: フォークリフトのアタッチメントタイプ
+        year:
+          type: integer
+          description: 製造年
+        hourMeter:
+          type: number
+          format: double
+          description: アワーメーターの読み取り値
+        application:
+          type: string
+          description: フォークリフトの用途
+        fob:
+          type: number
+          format: double
+          description: フォークリフトのFOB価格

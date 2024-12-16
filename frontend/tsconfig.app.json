@@ -1,0 +1,19 @@
+// tsconfig.app.json (アプリケーションコード用)
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["node", "vite/client", "vue", "aria-query", "mdx"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    ".storybook/**/*",
+    "src/**/*.stories.ts",
+    "src/**/*.stories.tsx",
+    "src/**/*.stories.mdx"
+  ],
+  "exclude": ["src/**/__tests__/*"]
+}

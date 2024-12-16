@@ -1,0 +1,105 @@
+# GitHub Actions Workflow (staging.yml)
+name: 'Staging'
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform (plan/apply/destroy)'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+        - plan
+        - apply
+        - destroy
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+
+    - name: Terraform Init
+      run: |
+        # 現在のディレクトリを表示（デバッグ用）
+        pwd
+        ls -la
+        cd infrastructure/terraform/environments/staging
+        terraform init
+
+
+    - name: Build Docker image
+      run: docker build -t revised-corporate-site --target staging -f infrastructure/docker/backend/Dockerfile ./backend --no-cache
+
+    - name: Configure AWS credentials for ECR
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Push image to ECR
+      env:
+        ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker tag revised-corporate-site ${{ secrets.ECR_REPOSITORY}}:${{ github.sha }}
+        aws ecr create-repository \
+        --repository-name revised-corporate-site \
+        --region ap-northeast-1 \
+        --image-scanning-configuration scanOnPush=true \
+        --image-tag-mutability MUTABLE
+        docker push ${{ secrets.ECR_REPOSITORY}}:${{ github.sha }}
+
+    - name: Terraform Plan
+      run: |
+        cd infrastructure/terraform/environments/staging
+        terraform plan \
+          -var="ecr_repository_arn=${{ secrets.ECR_REPOSITORY}}" \
+          -var="image_tag=${{ github.sha }}" \
+          -out=tfplan
+      continue-on-error: true
+
+    - name: Terraform Apply
+      if: github.event_name == 'push' || github.event.inputs.action == 'apply'
+      run: | 
+        cd infrastructure/terraform/environments/staging  
+        terraform apply -auto-approve tfplan
+
+    - name: Terraform Destroy
+      if: github.event.inputs.action == 'destroy'
+      run: | 
+        cd infrastructure/terraform/environments/staging  
+        terraform destroy \
+          -var="ecr_repository_arn=${{ secrets.ECR_REPOSITORY}}" \
+          -var="image_tag=${{ github.sha }}" \
+          -auto-approve
+
+    # - name: Upload Terraform State
+    #   if: success() && (github.event_name == 'push' || github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy')
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: terraform-state
+    #     path: ${{ github.workspace }}/infrastructure/terraform/environments/staging/terraform.tfstate

@@ -1,0 +1,5 @@
+package: email
+generate:
+  std-http-server: true
+  models: true
+output: backend/infra/api/email/email.gen.go

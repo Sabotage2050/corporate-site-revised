@@ -1,0 +1,5 @@
+package: forklift
+generate:
+  std-http-server: true
+  models: true
+output: backend/infra/api/forklift/forklift.gen.go

@@ -1,0 +1,10 @@
+infrastructure/terraform/**/*.terraform*
+infrastructure/terraform/**/terraform.*
+summary
+infrastructure/terraform/**/*.terraform*
+infrastructure/terraform/**/terraform.*
+summary
+**/.env*
+frontend/dist
+frontend/node_modules
+backend/tmp

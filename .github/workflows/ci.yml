@@ -1,0 +1,89 @@
+name: 'CI'
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  TERRAFORM_VERSION: 1.5.0
+  WORKING_DIR: infrastructure/terraform/environments/dev
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+        aws-region: ${{ env.AWS_REGION }}
+
+    # - name: Setup Terraform
+    #   uses: hashicorp/setup-terraform@v3
+    #   with:
+    #     terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+    # - name: Terraform Format
+    #   run: terraform fmt -check
+    #   continue-on-error: true
+
+    # - name: Terraform Init
+    #   run: terraform init
+
+    # - name: Terraform Plan
+    #   run: terraform plan -no-color
+    #   continue-on-error: true
+
+    # - name: Terraform Apply
+    #   run: terraform apply -auto-approve
+
+    # - name: Terraform Destroy
+    #   run: terraform destroy -auto-approve
+
+
+
+    - name: Build and Test
+          # プロジェクトルートに移動
+      run: |
+        # 現在のディレクトリを表示（デバッグ用）
+        pwd
+        ls -la
+        cd ../../../../  # プロジェクトルートに戻る  
+        pwd
+        # AWS認証情報の確認（機密情報は一部マスク）
+        echo "AWS Region: $AWS_REGION"
+        echo "AWS Access Key ID: ${AWS_ACCESS_KEY_ID:0:5}..."
+        echo "AWS Session Token exists: $([[ -n $AWS_SESSION_TOKEN ]] && echo 'yes' || echo 'no')"
+ 
+        # Build the CI image
+        docker build \
+        -t backend-ci \
+        --target ci \
+        -f infrastructure/docker/backend/Dockerfile \
+        ./backend
+
+        # Run tests
+        docker run --rm \
+        -p 8080:8080 \
+        -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+        -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+        -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+        -e AWS_REGION=$AWS_REGION \
+        --env-file ./backend/.env.ci \
+        backend-ci go test ./tests/feature -v

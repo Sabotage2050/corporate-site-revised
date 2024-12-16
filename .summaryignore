@@ -1,0 +1,15 @@
+frontend/node_modules
+frontend/package-lock.json
+frontend/src/features/todo/__tests__
+frontend/.storybook
+frontend/src/stories
+frontend/src/assets
+frontend/dist
+backend/go.sum
+backend/.env*
+frontend/*.tsbuildinfo
+frontend/src/**/*.js
+frontend/src/**/*.d.ts
+frontend/src/**/*.map
+backend/tmp
+summary
